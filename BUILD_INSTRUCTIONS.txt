@@ -1,0 +1,108 @@
+================================================================================
+QUICK START GUIDE - Building ExcelCleaner.exe
+================================================================================
+
+STEP 1: Install Python Dependencies
+------------------------------------
+Open Command Prompt in this directory and run:
+
+    pip install -r requirements.txt
+
+This installs pandas, openpyxl, and pyinstaller.
+
+
+STEP 2: Build the Executable
+-----------------------------
+Run this command:
+
+    pyinstaller excel_cleaner.spec
+
+Alternative (if above doesn't work):
+
+    python -m PyInstaller excel_cleaner.spec
+
+
+STEP 3: Find Your Executable
+-----------------------------
+The executable will be created at:
+
+    dist\ExcelCleaner.exe
+
+You can now copy this .exe file anywhere and use it!
+
+
+================================================================================
+HOW TO USE THE EXECUTABLE
+================================================================================
+
+METHOD 1: Drag and Drop
+------------------------
+1. Find your Excel file (.xlsx)
+2. Drag it onto ExcelCleaner.exe
+3. A message box will show the results
+4. Find the cleaned file (ends with _CLEANED.xlsx) in the same folder
+
+
+METHOD 2: File Picker
+----------------------
+1. Double-click ExcelCleaner.exe
+2. A file browser will open
+3. Select your Excel file
+4. A message box will show the results
+5. Find the cleaned file in the same folder
+
+
+================================================================================
+WHAT THE TOOL DOES
+================================================================================
+
+The tool removes entire rows from your Excel file if they contain certain
+patterns in specific columns:
+
+Column BV (ShipmentID):
+  - Removes rows with "FOC"
+
+Column H (Order):
+  - Removes rows with "test", "testing", "M88", "GB Test", "GB Testing", or "GB"
+
+Column I (Buyer PO Number):
+  - Removes rows with "test", "testing", or "FOC"
+
+Column BO (Comment):
+  - Removes rows with "FOC" or "M88"
+
+All matching is case-insensitive and works on substrings.
+Example: "M880123" will match "M88" and be removed.
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Problem: "pyinstaller: command not found"
+Solution: Use "python -m PyInstaller excel_cleaner.spec" instead
+
+Problem: Executable won't run
+Solution: Right-click the .exe → Properties → Check "Unblock" if present
+
+Problem: "Permission denied" when running
+Solution: Close the Excel file if it's open in Excel
+
+Problem: "Missing columns" error
+Solution: Your Excel file must have columns H, I, BO, and BV
+
+
+================================================================================
+TECHNICAL NOTES
+================================================================================
+
+- The original file is NEVER modified
+- Output file is named: <original_name>_CLEANED.xlsx
+- The tool can handle large files (thousands of rows)
+- No installation required - just run the .exe
+- Works on Windows 10 and Windows 11
+
+
+================================================================================
+For detailed documentation, see README.md
+================================================================================
