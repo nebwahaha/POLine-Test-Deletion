@@ -2,12 +2,32 @@
 
 block_cipher = None
 
+import sys
+import os
+from pathlib import Path
+
+# Get tkinterdnd2 package location
+tkdnd_path = None
+for path in sys.path:
+    potential_path = Path(path) / 'tkinterdnd2'
+    if potential_path.exists():
+        tkdnd_path = potential_path
+        break
+
+# Prepare datas for tkinterdnd2
+datas = []
+if tkdnd_path:
+    # Include tkdnd directory with platform-specific libraries
+    tkdnd_dir = tkdnd_path / 'tkdnd'
+    if tkdnd_dir.exists():
+        datas.append((str(tkdnd_dir), 'tkinterdnd2/tkdnd'))
+
 a = Analysis(
     ['excel_cleaner.py'],
     pathex=[],
     binaries=[],
-    datas=[],
-    hiddenimports=['openpyxl', 'pandas', 'tkinter'],
+    datas=datas,
+    hiddenimports=['openpyxl', 'pandas', 'tkinter', 'tkinterdnd2'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
