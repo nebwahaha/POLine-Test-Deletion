@@ -11,6 +11,7 @@ from tkinter import filedialog, messagebox, ttk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 from pathlib import Path
 import threading
+import math
 
 
 class ExcelCleaner:
@@ -175,50 +176,91 @@ class ExcelCleaner:
 
 
 class ProgressWindow:
-    """Progress window to show cleaning status"""
+    """Progress window to show cleaning status with circular loading animation"""
     
     def __init__(self, parent):
         self.window = tk.Toplevel(parent)
         self.window.title("Processing...")
-        self.window.geometry("400x200")
+        self.window.geometry("400x250")
         self.window.resizable(False, False)
+        self.window.configure(bg='white')
         
         # Center the window
         self.window.update_idletasks()
         x = (self.window.winfo_screenwidth() // 2) - (400 // 2)
-        y = (self.window.winfo_screenheight() // 2) - (200 // 2)
-        self.window.geometry(f"400x200+{x}+{y}")
+        y = (self.window.winfo_screenheight() // 2) - (250 // 2)
+        self.window.geometry(f"400x250+{x}+{y}")
         
         # Make it modal
         self.window.transient(parent)
         self.window.grab_set()
         
+        # Canvas for circular loading animation
+        self.canvas = tk.Canvas(
+            self.window,
+            width=80,
+            height=80,
+            bg='white',
+            highlightthickness=0
+        )
+        self.canvas.pack(pady=30)
+        
         # Progress label
         self.label = tk.Label(
             self.window,
             text="Initializing...",
-            font=("Arial", 10),
-            wraplength=350
+            font=("Arial", 11),
+            wraplength=350,
+            bg='white',
+            fg='#2c3e50'
         )
-        self.label.pack(pady=20)
+        self.label.pack(pady=10)
         
-        # Progress bar
-        self.progress = ttk.Progressbar(
-            self.window,
-            mode='indeterminate',
-            length=350
-        )
-        self.progress.pack(pady=10)
-        self.progress.start(10)
+        # Animation properties
+        self.angle = 0
+        self.num_bars = 12
+        self.bar_length = 15
+        self.bar_width = 4
+        self.radius = 25
+        self.animation_running = True
         
-        # Status text
-        self.status = tk.Label(
-            self.window,
-            text="",
-            font=("Arial", 8),
-            fg="gray"
-        )
-        self.status.pack(pady=10)
+        # Start animation
+        self.animate()
+    
+    def draw_spinner(self):
+        """Draw the circular loading spinner"""
+        self.canvas.delete("all")
+        
+        for i in range(self.num_bars):
+            # Calculate angle for this bar
+            bar_angle = (360 / self.num_bars) * i + self.angle
+            rad = math.radians(bar_angle)
+            
+            # Calculate start and end points
+            x1 = 40 + (self.radius - self.bar_length) * math.cos(rad)
+            y1 = 40 + (self.radius - self.bar_length) * math.sin(rad)
+            x2 = 40 + self.radius * math.cos(rad)
+            y2 = 40 + self.radius * math.sin(rad)
+            
+            # Calculate opacity based on position (fade effect)
+            opacity_index = (i - int(self.angle / (360 / self.num_bars))) % self.num_bars
+            opacity = int(255 * (1 - opacity_index / self.num_bars))
+            color = f'#{opacity:02x}{opacity:02x}{opacity:02x}'
+            
+            # Draw the bar
+            self.canvas.create_line(
+                x1, y1, x2, y2,
+                width=self.bar_width,
+                fill=color,
+                capstyle=tk.ROUND
+            )
+    
+    def animate(self):
+        """Animate the spinner"""
+        if self.animation_running:
+            self.draw_spinner()
+            self.angle = (self.angle + 30) % 360
+            self.window.after(100, self.animate)
     
     def update_message(self, message):
         """Update the progress message"""
@@ -227,7 +269,7 @@ class ProgressWindow:
     
     def close(self):
         """Close the progress window"""
-        self.progress.stop()
+        self.animation_running = False
         self.window.destroy()
 
 
