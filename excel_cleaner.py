@@ -497,7 +497,7 @@ class ExcelCleanerGUI:
         # Create delete data checkbox
         checkbox = tk.Checkbutton(
             checkbox_frame,
-            text="Create Delete Data Excel",
+            text="Create separate file for deleted data",
             variable=self.save_deleted_var,
             font=("Segoe UI", 10),
             bg="#0f172a",
