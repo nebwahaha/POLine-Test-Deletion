@@ -25,12 +25,14 @@ class ExcelCleaner:
         'ShipmentID': 'BV'      # Column BV (index 73)
     }
     
-    def __init__(self, input_file, progress_callback=None):
+    def __init__(self, input_file, progress_callback=None, save_deleted=False):
         self.input_file = Path(input_file)
         self.df = None
         self.rows_removed = 0
         self.original_row_count = 0
         self.progress_callback = progress_callback
+        self.save_deleted = save_deleted
+        self.deleted_rows = None
     
     def update_progress(self, message):
         """Update progress message if callback is provided"""
@@ -136,6 +138,11 @@ class ExcelCleaner:
             comment_patterns = ['FOC', 'M88']
             keep_mask &= ~comment_col.apply(lambda x: self.contains_pattern(x, comment_patterns))
         
+        # Store deleted rows if save_deleted is enabled
+        if self.save_deleted:
+            self.update_progress("Storing deleted rows...")
+            self.deleted_rows = self.df[~keep_mask].copy()
+        
         # Apply the mask to keep only valid rows
         self.update_progress("Applying filters...")
         self.df = self.df[keep_mask]
@@ -159,6 +166,27 @@ class ExcelCleaner:
             return None
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save cleaned file:\n{str(e)}")
+            return None
+    
+    def save_deleted_file(self):
+        """Save deleted rows to a separate Excel file"""
+        if self.deleted_rows is None or len(self.deleted_rows) == 0:
+            return None
+        
+        # Generate output filename
+        output_filename = self.input_file.stem + "_DELETED.xlsx"
+        output_path = self.input_file.parent / output_filename
+        
+        try:
+            self.update_progress("Saving deleted rows file...")
+            self.deleted_rows.to_excel(output_path, index=False, engine='openpyxl')
+            self.update_progress("Deleted rows file saved!")
+            return output_path
+        except PermissionError:
+            messagebox.showerror("Error", f"Cannot write to file. It may be open in another program:\n{output_path}")
+            return None
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save deleted rows file:\n{str(e)}")
             return None
     
     def process(self):
@@ -356,17 +384,18 @@ class ExcelCleanerGUI:
     def __init__(self):
         self.root = TkinterDnD.Tk()
         self.root.title("Excel Cleaner")
-        self.root.geometry("700x550")
+        self.root.geometry("700x600")
         self.root.resizable(False, False)
         self.root.configure(bg="#0f172a")
         
         # Center the window
         self.root.update_idletasks()
         x = (self.root.winfo_screenwidth() // 2) - (700 // 2)
-        y = (self.root.winfo_screenheight() // 2) - (550 // 2)
-        self.root.geometry(f"700x550+{x}+{y}")
+        y = (self.root.winfo_screenheight() // 2) - (600 // 2)
+        self.root.geometry(f"700x600+{x}+{y}")
         
         self.current_screen = "main"
+        self.save_deleted_var = tk.BooleanVar(value=False)
         self.setup_ui()
         
     def setup_ui(self):
@@ -461,6 +490,26 @@ class ExcelCleanerGUI:
         self.drop_frame.drop_target_register(DND_FILES)
         self.drop_frame.dnd_bind('<<Drop>>', self.on_drop)
         
+        # Checkbox frame
+        checkbox_frame = tk.Frame(main_container, bg="#0f172a")
+        checkbox_frame.pack(fill=tk.X, pady=(15, 0))
+        
+        # Create delete data checkbox
+        checkbox = tk.Checkbutton(
+            checkbox_frame,
+            text="Create Delete Data Excel",
+            variable=self.save_deleted_var,
+            font=("Segoe UI", 10),
+            bg="#0f172a",
+            fg="#e2e8f0",
+            activebackground="#0f172a",
+            activeforeground="#6366f1",
+            selectcolor="#0f172a",
+            highlightthickness=0,
+            bd=0
+        )
+        checkbox.pack(side=tk.LEFT, padx=5)
+        
         # Bottom info frame
         bottom_frame = tk.Frame(main_container, bg="#0f172a", height=60)
         bottom_frame.pack(fill=tk.X, pady=(20, 0))
@@ -527,9 +576,15 @@ class ExcelCleanerGUI:
             try:
                 cleaner = ExcelCleaner(
                     file_path,
-                    progress_callback=lambda msg: progress_window.update_message(msg)
+                    progress_callback=lambda msg: progress_window.update_message(msg),
+                    save_deleted=self.save_deleted_var.get()
                 )
                 output_path = cleaner.process()
+                
+                # Save deleted file if checkbox is enabled
+                deleted_path = None
+                if self.save_deleted_var.get():
+                    deleted_path = cleaner.save_deleted_file()
                 
                 # Close progress window
                 self.root.after(0, progress_window.close)
@@ -542,6 +597,10 @@ class ExcelCleanerGUI:
                         f"Remaining rows: {len(cleaner.df)}\n\n"
                         f"Cleaned file saved to:\n{output_path}"
                     )
+                    
+                    if deleted_path:
+                        message += f"\n\nDeleted rows file saved to:\n{deleted_path}"
+                    
                     self.root.after(0, lambda: messagebox.showinfo("Success", message))
                 else:
                     self.root.after(0, lambda: messagebox.showerror("Error", "Cleaning process failed."))
